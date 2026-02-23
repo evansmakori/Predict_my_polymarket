@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: polymarket-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DUCKDB_PATH=/data/markets.duckdb
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:80
+    volumes:
+      - ./data:/data
+      - ./backend:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: polymarket-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_WS_BASE_URL=ws://localhost:8000
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  default:
+    name: polymarket-network

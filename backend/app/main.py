@@ -1,0 +1,81 @@
+"""
+FastAPI main application
+"""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .core.config import settings
+from .core.database import ensure_tables, get_connection
+from .api.markets import router as markets_router
+from .api.websocket import router as websocket_router
+
+# Create FastAPI app
+app = FastAPI(
+    title="Polymarket Trading Dashboard API",
+    description="Real-time analytics and trading signals for Polymarket prediction markets",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(markets_router)
+app.include_router(websocket_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup."""
+    con = get_connection()
+    try:
+        ensure_tables(con)
+        print("✓ Database tables initialized")
+    finally:
+        con.close()
+
+
+@app.get("/")
+async def root():
+    """Root endpoint - API information."""
+    return {
+        "name": "Polymarket Trading Dashboard API",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    try:
+        con = get_connection()
+        con.execute("SELECT 1")
+        con.close()
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+    
+    return {
+        "status": "ok",
+        "database": db_status,
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=True,
+    )
