@@ -54,3 +54,6 @@ coverage/
 tmp/
 temp/
 *.tmp
+backend/venv_existing/
+backend/venv/
+node_modules/
