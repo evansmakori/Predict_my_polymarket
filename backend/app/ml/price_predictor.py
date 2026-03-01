@@ -22,6 +22,11 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
     logging.warning("PyTorch not available. Using fallback prediction.")
+    # Create dummy classes when PyTorch is not available
+    class Dataset:
+        pass
+    class DataLoader:
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +35,12 @@ class MarketPriceDataset(Dataset):
     """Dataset for market price prediction."""
     
     def __init__(self, features: np.ndarray, targets: np.ndarray):
-        self.features = torch.FloatTensor(features)
-        self.targets = torch.FloatTensor(targets)
+        if TORCH_AVAILABLE:
+            self.features = torch.FloatTensor(features)
+            self.targets = torch.FloatTensor(targets)
+        else:
+            self.features = features
+            self.targets = targets
     
     def __len__(self):
         return len(self.features)
@@ -40,7 +49,7 @@ class MarketPriceDataset(Dataset):
         return self.features[idx], self.targets[idx]
 
 
-class PricePredictionNetwork(nn.Module):
+class PricePredictionNetwork(nn.Module if TORCH_AVAILABLE else object):
     """
     Neural network for price prediction.
     
@@ -51,28 +60,32 @@ class PricePredictionNetwork(nn.Module):
     """
     
     def __init__(self, input_size: int = 15, hidden_sizes: List[int] = [128, 64, 32]):
-        super(PricePredictionNetwork, self).__init__()
+        if TORCH_AVAILABLE:
+            super(PricePredictionNetwork, self).__init__()
         
-        layers = []
-        prev_size = input_size
-        
-        for hidden_size in hidden_sizes:
-            layers.extend([
-                nn.Linear(prev_size, hidden_size),
-                nn.ReLU(),
-                nn.BatchNorm1d(hidden_size),
-                nn.Dropout(0.3)
-            ])
-            prev_size = hidden_size
-        
-        # Output layer - predicts price change
-        layers.append(nn.Linear(prev_size, 1))
-        layers.append(nn.Tanh())  # Output between -1 and 1
-        
-        self.network = nn.Sequential(*layers)
+        if TORCH_AVAILABLE:
+            layers = []
+            prev_size = input_size
+            
+            for hidden_size in hidden_sizes:
+                layers.extend([
+                    nn.Linear(prev_size, hidden_size),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(hidden_size),
+                    nn.Dropout(0.3)
+                ])
+                prev_size = hidden_size
+            
+            # Output layer - predicts price change
+            layers.append(nn.Linear(prev_size, 1))
+            layers.append(nn.Tanh())  # Output between -1 and 1
+            
+            self.network = nn.Sequential(*layers)
     
     def forward(self, x):
-        return self.network(x)
+        if TORCH_AVAILABLE:
+            return self.network(x)
+        return None
 
 
 class PricePredictor:
@@ -93,10 +106,12 @@ class PricePredictor:
         self.scaler_path = "models/price_scaler.pkl"
         self.feature_scaler = None
         self.target_scaler = None
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         if TORCH_AVAILABLE:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._load_or_initialize_model()
+        else:
+            self.device = "cpu"
         
         logger.info(f"PricePredictor initialized. Device: {self.device if TORCH_AVAILABLE else 'CPU (fallback)'}")
     

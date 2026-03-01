@@ -1,0 +1,118 @@
+# DigitalOcean App Platform Configuration
+# This file defines the deployment configuration for DigitalOcean App Platform
+
+name: polymarket-ai-predictor
+region: nyc
+
+# Alerts for monitoring
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+# Backend API Service
+services:
+  - name: backend-api
+    # Source configuration
+    github:
+      repo: evansmakori/Predict_my_polymarket
+      branch: main
+      deploy_on_push: true
+    
+    # Build configuration
+    source_dir: /backend
+    
+    # Environment
+    envs:
+      - key: API_HOST
+        value: "0.0.0.0"
+      - key: API_PORT
+        value: "8000"
+      - key: CORS_ORIGINS
+        value: "${APP_URL}"
+        type: SECRET
+      - key: DATABASE_URL
+        value: "sqlite:///./polymarket.db"
+      - key: ENABLE_GPU
+        value: "false"  # Set to true if using GPU droplet
+      - key: TORCH_DEVICE
+        value: "cpu"  # Change to "cuda" for GPU instances
+      - key: LOG_LEVEL
+        value: "INFO"
+    
+    # Build command
+    build_command: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    
+    # Run command
+    run_command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    
+    # HTTP configuration
+    http_port: 8000
+    
+    # Health check
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    
+    # Instance configuration
+    instance_count: 1
+    instance_size_slug: professional-xs  # Upgrade to professional-m for better performance
+    
+    # Routes
+    routes:
+      - path: /api
+      - path: /docs
+      - path: /ws
+
+  # Frontend Service
+  - name: frontend
+    # Source configuration
+    github:
+      repo: evansmakori/Predict_my_polymarket
+      branch: main
+      deploy_on_push: true
+    
+    source_dir: /frontend
+    
+    # Environment variables
+    envs:
+      - key: VITE_API_BASE_URL
+        value: "${backend-api.PUBLIC_URL}"
+        type: SECRET
+      - key: VITE_WS_BASE_URL
+        value: "${backend-api.PUBLIC_URL}"
+        type: SECRET
+    
+    # Build configuration
+    build_command: |
+      npm ci
+      npm run build
+    
+    # Output directory
+    output_dir: dist
+    
+    # Instance configuration
+    instance_count: 1
+    instance_size_slug: basic-xs
+    
+    # Routes
+    routes:
+      - path: /
+
+# Static site alternative (optional)
+# static_sites:
+#   - name: frontend-static
+#     github:
+#       repo: evansmakori/Predict_my_polymarket
+#       branch: main
+#       deploy_on_push: true
+#     source_dir: /frontend
+#     build_command: npm ci && npm run build
+#     output_dir: dist
+#     routes:
+#       - path: /
