@@ -5,6 +5,7 @@ import duckdb
 
 from ..core.database import get_connection, TBL_STATS, TBL_HIST, TBL_OB
 from ..models.market import MarketListItem, MarketStats, MarketFilter
+from ..core.scoring import rank_markets, calculate_market_score
 
 
 class MarketService:
@@ -227,3 +228,150 @@ class MarketService:
             return result[0] if result else 0
         finally:
             con.close()
+    
+    @staticmethod
+    def get_ranked_markets(
+        filters: MarketFilter,
+        normalization_params: Optional[Dict[str, float]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get markets ranked by predictive strength score.
+        
+        Args:
+            filters: Market filters
+            normalization_params: Optional custom normalization parameters
+            
+        Returns:
+            List of markets with scores, sorted by rank
+        """
+        # Get markets with full stats needed for scoring
+        con = get_connection()
+        try:
+            # Build WHERE clause
+            where_clauses = []
+            params = {}
+            
+            if filters.category:
+                where_clauses.append("category = $category")
+                params["category"] = filters.category
+            
+            if filters.min_liquidity is not None:
+                where_clauses.append("liquidity >= $min_liquidity")
+                params["min_liquidity"] = filters.min_liquidity
+            
+            if filters.max_liquidity is not None:
+                where_clauses.append("liquidity <= $max_liquidity")
+                params["max_liquidity"] = filters.max_liquidity
+            
+            if filters.min_volume is not None:
+                where_clauses.append("volume >= $min_volume")
+                params["min_volume"] = filters.min_volume
+            
+            if filters.max_volume is not None:
+                where_clauses.append("volume <= $max_volume")
+                params["max_volume"] = filters.max_volume
+            
+            if filters.trade_signal:
+                where_clauses.append("trade_signal = $trade_signal")
+                params["trade_signal"] = filters.trade_signal
+            
+            if filters.active_only:
+                where_clauses.append("active = true AND closed = false")
+            
+            where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+            
+            # Get latest snapshot for each market with all scoring metrics
+            query = f"""
+            WITH latest AS (
+                SELECT market_id, MAX(snapshot_ts) as max_ts
+                FROM {TBL_STATS}
+                GROUP BY market_id
+            )
+            SELECT 
+                s.*
+            FROM {TBL_STATS} s
+            INNER JOIN latest l ON s.market_id = l.market_id AND s.snapshot_ts = l.max_ts
+            WHERE {where_sql}
+            LIMIT $limit OFFSET $offset
+            """
+            
+            params["limit"] = filters.limit
+            params["offset"] = filters.offset
+            
+            df = con.execute(query, params).fetchdf()
+            markets = df.to_dict(orient="records")
+            
+        finally:
+            con.close()
+        
+        # Rank markets using scoring system
+        ranked_markets = rank_markets(markets, normalization_params)
+        
+        return ranked_markets
+    
+    @staticmethod
+    def get_market_score(market_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get detailed scoring breakdown for a specific market.
+        
+        Args:
+            market_id: Market ID
+            
+        Returns:
+            Dictionary with market data and detailed score breakdown
+        """
+        market = MarketService.get_market_by_id(market_id)
+        if not market:
+            return None
+        
+        score_result = calculate_market_score(market)
+        
+        return {
+            "market_id": market_id,
+            "title": market.get("title"),
+            "score": score_result["score"],
+            "category": score_result["category"],
+            "breakdown": score_result,
+            "metrics": {
+                "expected_value": market.get("expected_value"),
+                "kelly_fraction": market.get("kelly_fraction"),
+                "liquidity": market.get("liquidity") or market.get("liquidity_clob"),
+                "volatility_1w": market.get("volatility_1w"),
+                "orderbook_imbalance": market.get("orderbook_imbalance"),
+                "spread": market.get("spread"),
+                "sentiment_momentum": market.get("sentiment_momentum"),
+            }
+        }
+    
+    @staticmethod
+    def get_top_opportunities(
+        limit: int = 20,
+        min_score: float = 60.0,
+        active_only: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Get top scoring market opportunities.
+        
+        Args:
+            limit: Maximum number of markets to return
+            min_score: Minimum predictive strength score
+            active_only: Only include active markets
+            
+        Returns:
+            List of top-ranked markets
+        """
+        filters = MarketFilter(
+            active_only=active_only,
+            limit=500  # Get more to filter by score
+        )
+        
+        ranked_markets = MarketService.get_ranked_markets(filters)
+        
+        # Filter by minimum score
+        top_markets = [
+            m for m in ranked_markets
+            if m.get("predictive_strength_score", 0) >= min_score
+        ]
+        
+        # Return top N
+        return top_markets[:limit]

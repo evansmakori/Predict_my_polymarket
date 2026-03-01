@@ -60,6 +60,56 @@ export const marketsApi = {
     const response = await api.post('/api/markets/extract', data)
     return response.data
   },
+
+  // Get ranked markets by predictive strength score
+  getRankedMarkets: async (filters = {}) => {
+    const response = await api.get('/api/markets/ranked', { params: filters })
+    return response.data
+  },
+
+  // Get top opportunities
+  getOpportunities: async (limit = 20, minScore = 60) => {
+    const response = await api.get('/api/markets/opportunities', {
+      params: { limit, min_score: minScore }
+    })
+    return response.data
+  },
+
+  // Get market score details
+  getMarketScoreDetails: async (marketId) => {
+    const response = await api.get(`/api/markets/${marketId}/score`)
+    return response.data
+  },
+
+  // Get score history
+  getScoreHistory: async (marketId, days = 30, intervalHours = 24) => {
+    const response = await api.get(`/api/markets/${marketId}/score-history`, {
+      params: { days, interval_hours: intervalHours }
+    })
+    return response.data
+  },
+
+  // Get score trend
+  getScoreTrend: async (marketId, days = 7) => {
+    const response = await api.get(`/api/markets/${marketId}/score-trend`, {
+      params: { days }
+    })
+    return response.data
+  },
+
+  // Get improving markets
+  getImprovingMarkets: async (days = 7, limit = 10) => {
+    const response = await api.get('/api/markets/analytics/improving', {
+      params: { days, limit }
+    })
+    return response.data
+  },
+
+  // Get alerts
+  getAlerts: async (filters = {}) => {
+    const response = await api.get('/api/markets/alerts', { params: filters })
+    return response.data
+  },
 }
 
 // WebSocket connection helper

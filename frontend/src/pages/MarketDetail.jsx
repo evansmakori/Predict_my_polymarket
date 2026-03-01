@@ -7,6 +7,13 @@ import { formatPercent, formatDateTime, getSignalColor } from '../utils/formatte
 import StatsGrid from '../components/StatsGrid'
 import PriceChart from '../components/PriceChart'
 import OrderbookView from '../components/OrderbookView'
+import ScoreBreakdownChart from '../components/ScoreBreakdownChart'
+import ScoreHistoryChart from '../components/ScoreHistoryChart'
+import MarketMetaSidebar from '../components/MarketMetaSidebar'
+import RiskAlerts from '../components/RiskAlerts'
+import LiquidityHeatmap from '../components/LiquidityHeatmap'
+import UnifiedRiskScore from '../components/UnifiedRiskScore'
+import ProbabilityGauge from '../components/ProbabilityGauge'
 
 function MarketDetail() {
   const { marketId } = useParams()
@@ -117,125 +124,108 @@ function MarketDetail() {
             )}
           </div>
 
-          {/* Prices */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">YES</p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                {formatPercent(displayData.ui_yes_price || displayData.yes_price)}
-              </p>
-              {displayData.best_bid_yes && displayData.best_ask_yes && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Bid: {formatPercent(displayData.best_bid_yes)} / Ask: {formatPercent(displayData.best_ask_yes)}
-                </p>
-              )}
-            </div>
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">NO</p>
-              <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-                {formatPercent(displayData.ui_no_price || displayData.no_price)}
-              </p>
-              {displayData.best_bid_no && displayData.best_ask_no && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Bid: {formatPercent(displayData.best_bid_no)} / Ask: {formatPercent(displayData.best_ask_no)}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Trading Signal & Alerts */}
-          <div className="flex flex-wrap gap-3">
-            {displayData.trade_signal && (
-              <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${getSignalColor(displayData.trade_signal)}`}>
-                {displayData.trade_signal === 'long' && <TrendingUp className="w-4 h-4" />}
-                {displayData.trade_signal === 'short' && <TrendingDown className="w-4 h-4" />}
-                <span className="font-medium capitalize">Signal: {displayData.trade_signal}</span>
-              </div>
-            )}
-
-            {displayData.late_overconfidence && (
-              <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">Late Overconfidence</span>
-              </div>
-            )}
-
-            {displayData.overreaction_flag && (
-              <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">Overreaction Detected</span>
-              </div>
-            )}
-          </div>
-
           {/* Timestamps */}
-          <div className="text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-3">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Last updated: {formatDateTime(displayData.snapshot_ts)}
           </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <StatsGrid market={displayData} />
+      {/* Main Grid Layout: Content + Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Content Area */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Risk Alerts */}
+          <RiskAlerts market={displayData} />
 
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Fair Value & Expected Value */}
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Valuation</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Fair Value</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {formatPercent(displayData.fair_value)}
-              </span>
+          {/* Probability Gauge */}
+          <ProbabilityGauge 
+            probability={displayData.ui_yes_price || displayData.yes_price || 0.5}
+            previousProbability={history && history.length > 1 ? history[history.length - 2].price : null}
+          />
+
+          {/* Stats Grid */}
+          <StatsGrid market={displayData} />
+
+          {/* Unified Risk Score */}
+          <UnifiedRiskScore market={displayData} />
+
+          {/* Predictive Strength Score Section */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <ScoreBreakdownChart marketId={marketId} />
+            <ScoreHistoryChart marketId={marketId} />
+          </div>
+
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Fair Value & Expected Value */}
+            <div className="card">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Valuation</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Fair Value</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {formatPercent(displayData.fair_value)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Expected Value</span>
+                  <span className={`font-semibold ${displayData.expected_value > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {displayData.expected_value !== null ? `${(displayData.expected_value * 10000).toFixed(0)} bps` : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Kelly Fraction</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {displayData.kelly_fraction !== null ? formatPercent(displayData.kelly_fraction) : 'N/A'}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Expected Value</span>
-              <span className={`font-semibold ${displayData.expected_value > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {displayData.expected_value !== null ? `${(displayData.expected_value * 10000).toFixed(0)} bps` : 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Kelly Fraction</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {displayData.kelly_fraction !== null ? formatPercent(displayData.kelly_fraction) : 'N/A'}
-              </span>
+
+            {/* Risk Metrics */}
+            <div className="card">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Risk Metrics</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Volatility (1w)</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {displayData.volatility_1w !== null ? formatPercent(displayData.volatility_1w) : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Orderbook Imbalance</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {displayData.orderbook_imbalance !== null ? formatPercent(displayData.orderbook_imbalance) : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Slippage ($1k)</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {displayData.slippage_notional_1k !== null ? `${displayData.slippage_notional_1k.toFixed(0)} bps` : 'N/A'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Price Chart with Enhanced Tooltips */}
+          {history && <PriceChart data={history} />}
+
+          {/* Liquidity Heatmap */}
+          {orderbook && <LiquidityHeatmap orderbook={orderbook} />}
+
+          {/* Orderbook */}
+          {orderbook && <OrderbookView orderbook={orderbook} />}
         </div>
 
-        {/* Risk Metrics */}
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Risk Metrics</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Volatility (1w)</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {displayData.volatility_1w !== null ? formatPercent(displayData.volatility_1w) : 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Orderbook Imbalance</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {displayData.orderbook_imbalance !== null ? formatPercent(displayData.orderbook_imbalance) : 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Slippage ($1k)</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {displayData.slippage_notional_1k !== null ? `${displayData.slippage_notional_1k.toFixed(0)} bps` : 'N/A'}
-              </span>
-            </div>
+        {/* Sidebar */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-6 space-y-6">
+            <MarketMetaSidebar market={displayData} />
           </div>
         </div>
       </div>
-
-      {/* Price Chart */}
-      {history && <PriceChart data={history} />}
-
-      {/* Orderbook */}
-      {orderbook && <OrderbookView orderbook={orderbook} />}
     </div>
   )
 }

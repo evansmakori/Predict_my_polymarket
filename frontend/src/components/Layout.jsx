@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, TrendingUp, PlusCircle } from 'lucide-react'
+import { Home, TrendingUp, PlusCircle, Trophy } from 'lucide-react'
 
 function Layout({ children }) {
   const location = useLocation()
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
+    { path: '/rankings', label: 'Rankings', icon: Trophy },
     { path: '/extract', label: 'Extract Market', icon: PlusCircle },
   ]
 

@@ -77,6 +77,10 @@ class MarketStats(BaseModel):
     late_overconfidence: Optional[bool] = None
     slippage_notional_1k: Optional[float] = None
     slippage_notional_10k: Optional[float] = None
+    
+    # Predictive Strength Scoring
+    predictive_strength_score: Optional[float] = None
+    score_category: Optional[str] = None
 
 
 class MarketListItem(BaseModel):
@@ -90,6 +94,8 @@ class MarketListItem(BaseModel):
     liquidity: Optional[float] = None
     trade_signal: Optional[str] = None
     degen_risk: Optional[float] = None
+    predictive_strength_score: Optional[float] = None
+    score_category: Optional[str] = None
     snapshot_ts: datetime
 
 
