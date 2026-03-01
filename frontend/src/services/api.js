@@ -112,6 +112,71 @@ export const marketsApi = {
   },
 }
 
+// AI Features API
+export const aiApi = {
+  // Get AI status
+  getStatus: async () => {
+    const response = await api.get('/api/ai/status')
+    return response.data
+  },
+
+  // Get price prediction
+  getPricePrediction: async (marketId) => {
+    const response = await api.get(`/api/ai/predict/${marketId}`)
+    return response.data
+  },
+
+  // Get sentiment analysis
+  getSentimentAnalysis: async (marketId) => {
+    const response = await api.get(`/api/ai/sentiment/${marketId}`)
+    return response.data
+  },
+
+  // Get anomaly detection
+  getAnomalyDetection: async (marketId) => {
+    const response = await api.get(`/api/ai/anomaly/${marketId}`)
+    return response.data
+  },
+
+  // Get all anomalies
+  getAllAnomalies: async (limit = 50) => {
+    const response = await api.get('/api/ai/anomalies', { params: { limit } })
+    return response.data
+  },
+
+  // Get trading signal
+  getTradingSignal: async (marketId) => {
+    const response = await api.get(`/api/ai/trading-signal/${marketId}`)
+    return response.data
+  },
+
+  // Get all trading signals
+  getAllTradingSignals: async (limit = 20) => {
+    const response = await api.get('/api/ai/trading-signals', { params: { limit } })
+    return response.data
+  },
+
+  // Get top opportunities
+  getTopOpportunities: async (limit = 10, minConfidence = 0.5) => {
+    const response = await api.get('/api/ai/opportunities', {
+      params: { limit, min_confidence: minConfidence }
+    })
+    return response.data
+  },
+
+  // Get model info
+  getModelInfo: async () => {
+    const response = await api.get('/api/ai/model-info')
+    return response.data
+  },
+}
+
+// Export individual AI functions for convenience
+export const getPricePrediction = aiApi.getPricePrediction
+export const getSentimentAnalysis = aiApi.getSentimentAnalysis
+export const getAnomalyDetection = aiApi.getAnomalyDetection
+export const getTradingSignal = aiApi.getTradingSignal
+
 // WebSocket connection helper
 export const createWebSocket = (marketId) => {
   const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'

@@ -14,6 +14,9 @@ import RiskAlerts from '../components/RiskAlerts'
 import LiquidityHeatmap from '../components/LiquidityHeatmap'
 import UnifiedRiskScore from '../components/UnifiedRiskScore'
 import ProbabilityGauge from '../components/ProbabilityGauge'
+import AIPrediction from '../components/AIPrediction'
+import AITradingSignal from '../components/AITradingSignal'
+import AISentimentAnalysis from '../components/AISentimentAnalysis'
 
 function MarketDetail() {
   const { marketId } = useParams()
@@ -149,6 +152,19 @@ function MarketDetail() {
 
           {/* Unified Risk Score */}
           <UnifiedRiskScore market={displayData} />
+
+          {/* AI-Powered Features Section */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border-2 border-purple-200">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+              <span>🤖 AI-Powered Analysis</span>
+              <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">DigitalOcean GPU</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AIPrediction marketId={marketId} />
+              <AISentimentAnalysis marketId={marketId} />
+              <AITradingSignal marketId={marketId} />
+            </div>
+          </div>
 
           {/* Predictive Strength Score Section */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

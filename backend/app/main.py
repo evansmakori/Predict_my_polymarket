@@ -8,6 +8,7 @@ from .core.config import settings
 from .core.database import ensure_tables, get_connection
 from .api.markets import router as markets_router
 from .api.websocket import router as websocket_router
+from .api.ai import router as ai_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -30,6 +31,7 @@ app.add_middleware(
 # Include routers
 app.include_router(markets_router)
 app.include_router(websocket_router)
+app.include_router(ai_router)
 
 
 @app.on_event("startup")
